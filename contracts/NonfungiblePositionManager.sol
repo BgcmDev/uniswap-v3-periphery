@@ -124,6 +124,7 @@ contract NonfungiblePositionManager is
         }
     }
 
+    // 铸造流动性
     /// @inheritdoc INonfungiblePositionManager
     function mint(MintParams calldata params)
         external

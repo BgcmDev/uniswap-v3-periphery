@@ -76,11 +76,16 @@ interface INonfungiblePositionManager is
             uint128 tokensOwed1
         );
 
+    // 铸造流动性参数
     struct MintParams {
+        // token0代币地址
         address token0;
+        // token1代币地址
         address token1;
         uint24 fee;
+        // tick下边界
         int24 tickLower;
+        // tick上边界
         int24 tickUpper;
         uint256 amount0Desired;
         uint256 amount1Desired;
