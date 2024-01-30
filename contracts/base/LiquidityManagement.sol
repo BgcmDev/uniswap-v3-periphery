@@ -30,19 +30,21 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
         MintCallbackData memory decoded = abi.decode(data, (MintCallbackData));
         CallbackValidation.verifyCallback(factory, decoded.poolKey);
 
+        // 根据传入的参数，使用 transferFrom 代用户向 Pool 中支付 token
         if (amount0Owed > 0) pay(decoded.poolKey.token0, decoded.payer, msg.sender, amount0Owed);
         if (amount1Owed > 0) pay(decoded.poolKey.token1, decoded.payer, msg.sender, amount1Owed);
     }
 
+    // 添加流动性参数结构体
     struct AddLiquidityParams {
-        address token0;
-        address token1;
-        uint24 fee;
-        address recipient;
-        int24 tickLower;
-        int24 tickUpper;
+        address token0;             // token0地址
+        address token1;             // token1地址
+        uint24 fee;                 // 交易费率
+        address recipient;          // 流动性接收者地址
+        int24 tickLower;            // 流动性的价格下限（以 token0 计价），这里传入的是 tick index
+        int24 tickUpper;            // 流动性的价格上限（以 token0 计价），这里传入的是 tick index
         uint256 amount0Desired;
-        uint256 amount1Desired;
+        uint256 amount1Desired;     
         uint256 amount0Min;
         uint256 amount1Min;
     }
@@ -59,15 +61,19 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
     {
         PoolAddress.PoolKey memory poolKey =
             PoolAddress.PoolKey({token0: params.token0, token1: params.token1, fee: params.fee});
-
+        
+        // 这里不需要访问 factory 合约，可以通过 token0, token1, fee 三个参数计算出 pool 的合约地址
         pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
 
         // compute the liquidity amount
         {
+            // 当前价格
             (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
+            // 流动性的价格下限（以 token0 计价）
             uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(params.tickLower);
+            // 流动性的价格上限（以 token0 计价）
             uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(params.tickUpper);
-
+            // 计算流动性数量
             liquidity = LiquidityAmounts.getLiquidityForAmounts(
                 sqrtPriceX96,
                 sqrtRatioAX96,
@@ -82,6 +88,7 @@ abstract contract LiquidityManagement is IUniswapV3MintCallback, PeripheryImmuta
             params.tickLower,
             params.tickUpper,
             liquidity,
+            // 使用回调函数来完成进行流动性 token 的支付操作
             abi.encode(MintCallbackData({poolKey: poolKey, payer: msg.sender}))
         );
 

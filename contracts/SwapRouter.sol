@@ -17,6 +17,7 @@ import './libraries/PoolAddress.sol';
 import './libraries/CallbackValidation.sol';
 import './interfaces/external/IWETH9.sol';
 
+// 面向用户交易接口的封装
 /// @title Uniswap V3 Swap Router
 /// @notice Router for stateless execution of swaps against Uniswap V3
 contract SwapRouter is
@@ -93,8 +94,10 @@ contract SwapRouter is
         // allow swapping to the router address with address 0
         if (recipient == address(0)) recipient = address(this);
 
+        // 将 path 解码，获取头部的 tokenIn, tokenOut, fee
         (address tokenIn, address tokenOut, uint24 fee) = data.path.decodeFirstPool();
 
+        // 因为交易池只保存了 token0 的价格，这里我们需要知道输入的是 x token 还是 y token
         bool zeroForOne = tokenIn < tokenOut;
 
         (int256 amount0, int256 amount1) =
@@ -111,6 +114,7 @@ contract SwapRouter is
         return uint256(-(zeroForOne ? amount1 : amount0));
     }
 
+    // 单个池交易
     /// @inheritdoc ISwapRouter
     function exactInputSingle(ExactInputSingleParams calldata params)
         external
@@ -128,6 +132,7 @@ contract SwapRouter is
         require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
 
+    // 指定交易对路径，支付 x token 数和预期得到最小的 y token 数(x，y可以互换)
     /// @inheritdoc ISwapRouter
     function exactInput(ExactInputParams memory params)
         external
@@ -138,14 +143,19 @@ contract SwapRouter is
     {
         address payer = msg.sender; // msg.sender pays for the first hop
 
+        // 通过循环，遍历传入的路径，进行交易
         while (true) {
+            // 判断是否是多池子交易
             bool hasMultiplePools = params.path.hasMultiplePools();
 
             // the outputs of prior swaps become the inputs to subsequent ones
+            // 完成当前路径的交易
             params.amountIn = exactInputInternal(
                 params.amountIn,
+                // 对于中间的交易，由合约代为收取和支付中间代币
                 hasMultiplePools ? address(this) : params.recipient, // for intermediate swaps, this contract custodies
                 0,
+                // 给回调函数用的参数
                 SwapCallbackData({
                     path: params.path.getFirstPool(), // only the first pool in the path is necessary
                     payer: payer
@@ -153,6 +163,7 @@ contract SwapRouter is
             );
 
             // decide whether to continue or terminate
+            // 如果路径全部遍历完成，则退出循环，交易完成
             if (hasMultiplePools) {
                 payer = address(this); // at this point, the caller has paid
                 params.path = params.path.skipToken();
@@ -161,7 +172,7 @@ contract SwapRouter is
                 break;
             }
         }
-
+        // 检查交易是否满足预期
         require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
 

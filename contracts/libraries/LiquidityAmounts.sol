@@ -47,8 +47,11 @@ library LiquidityAmounts {
 
     /// @notice Computes the maximum amount of liquidity received for a given amount of token0, token1, the current
     /// pool prices and the prices at the tick boundaries
+    // 当前交易池价格的 sqrt 价格
     /// @param sqrtRatioX96 A sqrt price representing the current pool prices
+    // 第一个刻度线边界的 sqrt 价格
     /// @param sqrtRatioAX96 A sqrt price representing the first tick boundary
+    // 第二个刻度线边界的 sqrt 价格
     /// @param sqrtRatioBX96 A sqrt price representing the second tick boundary
     /// @param amount0 The amount of token0 being sent in
     /// @param amount1 The amount of token1 being sent in
@@ -60,16 +63,19 @@ library LiquidityAmounts {
         uint256 amount0,
         uint256 amount1
     ) internal pure returns (uint128 liquidity) {
+        // 将两个价格排序
         if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
-
+        // 如果当前价格小于小的那个价格，此时流动性完全有 token0 组成
         if (sqrtRatioX96 <= sqrtRatioAX96) {
             liquidity = getLiquidityForAmount0(sqrtRatioAX96, sqrtRatioBX96, amount0);
         } else if (sqrtRatioX96 < sqrtRatioBX96) {
+            // 此时当前价格在 A、B 价格区间内，此时需要分别计算 token0和token1的流动性
+            // 此时实际的流动性值取小的那个
             uint128 liquidity0 = getLiquidityForAmount0(sqrtRatioX96, sqrtRatioBX96, amount0);
             uint128 liquidity1 = getLiquidityForAmount1(sqrtRatioAX96, sqrtRatioX96, amount1);
 
             liquidity = liquidity0 < liquidity1 ? liquidity0 : liquidity1;
-        } else {
+        } else {    // // 如果当前价格大于大的那个价格，此时流动性完全有 token1 组成
             liquidity = getLiquidityForAmount1(sqrtRatioAX96, sqrtRatioBX96, amount1);
         }
     }

@@ -24,11 +24,15 @@ interface ISwapRouter is IUniswapV3SwapCallback {
     function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
 
     struct ExactInputParams {
-        bytes path;
-        address recipient;
-        uint256 deadline;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
+        // 交易路径
+        // 需要在链下计算出交易的路径，例如使用 ETH -> DAI ：
+        //  可以直接通过 ETH/DAI 的交易池完成
+        //  也可以通过 ETH -> USDC -> DAI 路径，即经过 ETH/USDC, USDC/DAI 两个交易池完成交易
+        bytes path;                 
+        address recipient;              // 收款地址
+        uint256 deadline;               // 交易有效期
+        uint256 amountIn;               // 输入的 token 数（输入的 token 地址就是 path 中的第一个地址）
+        uint256 amountOutMinimum;       // 预期交易最少获得的 token 数（获得的 token 地址就是 path 中最后一个地址）
     }
 
     /// @notice Swaps `amountIn` of one token for as much as possible of another along the specified path

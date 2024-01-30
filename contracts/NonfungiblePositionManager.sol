@@ -124,7 +124,7 @@ contract NonfungiblePositionManager is
         }
     }
 
-    // 铸造流动性
+    // 提供流动性
     /// @inheritdoc INonfungiblePositionManager
     function mint(MintParams calldata params)
         external
@@ -139,6 +139,7 @@ contract NonfungiblePositionManager is
         )
     {
         IUniswapV3Pool pool;
+        // 这里是添加流动性，并完成 x token 和 y token 的发送
         (liquidity, amount0, amount1, pool) = addLiquidity(
             AddLiquidityParams({
                 token0: params.token0,
@@ -154,6 +155,7 @@ contract NonfungiblePositionManager is
             })
         );
 
+        // 铸造 ERC721 token 给用户，用来代表用户所持有的流动性
         _mint(params.recipient, (tokenId = _nextId++));
 
         bytes32 positionKey = PositionKey.compute(address(this), params.tickLower, params.tickUpper);
@@ -165,7 +167,7 @@ contract NonfungiblePositionManager is
                 address(pool),
                 PoolAddress.PoolKey({token0: params.token0, token1: params.token1, fee: params.fee})
             );
-
+        // 用 ERC721 的 token ID 作为键，将用户提供流动性的元信息保存起来
         _positions[tokenId] = Position({
             nonce: 0,
             operator: address(0),
