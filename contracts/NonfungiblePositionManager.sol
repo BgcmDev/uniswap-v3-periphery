@@ -308,6 +308,7 @@ contract NonfungiblePositionManager is
         emit DecreaseLiquidity(params.tokenId, params.liquidity, amount0, amount1);
     }
 
+    // 提取手续费
     /// @inheritdoc INonfungiblePositionManager
     function collect(CollectParams calldata params)
         external
@@ -320,6 +321,7 @@ contract NonfungiblePositionManager is
         // allow collecting to the nft position manager address with address 0
         address recipient = params.recipient == address(0) ? address(this) : params.recipient;
 
+        // 查询仓位信息
         Position storage position = _positions[params.tokenId];
 
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
@@ -329,7 +331,10 @@ contract NonfungiblePositionManager is
         (uint128 tokensOwed0, uint128 tokensOwed1) = (position.tokensOwed0, position.tokensOwed1);
 
         // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
+        // 这里会再次更新一次手续费累计总额
         if (position.liquidity > 0) {
+            // 使用 pool.burn() 来触发手续费的更新
+            // 调用时传入的 liquidity 为0，表示只是触发手续费总额的更新，并没有对流动性进行更新
             pool.burn(position.tickLower, position.tickUpper, 0);
             (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) =
                 pool.positions(PositionKey.compute(address(this), position.tickLower, position.tickUpper));
